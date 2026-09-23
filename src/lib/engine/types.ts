@@ -77,6 +77,22 @@ export interface DistrictResult {
   critical: Indicator[];
 }
 
+export interface BaseSummary {
+  score: number;
+  dAvg: number;
+  dMin: number;
+  nCrit: number;
+  weakestId: DistrictId;
+  districts: {
+    id: DistrictId;
+    nameRu: string;
+    populationShare: number;
+    score: number;
+    indicators: Record<Indicator, number>;
+    critical: Indicator[];
+  }[];
+}
+
 export interface ScoreBreakdown {
   valid: true;
   score: number;
@@ -85,6 +101,8 @@ export interface ScoreBreakdown {
   dAvg: number;
   dMin: number;
   nCrit: number;
+  weakestId: DistrictId;
+  base: Omit<BaseSummary, "districts">;
   cost: number;
   remaining: number;
   districts: DistrictResult[];

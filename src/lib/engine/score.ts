@@ -9,6 +9,7 @@ import {
   MEASURE_BY_ID,
 } from "./dataset";
 import type {
+  BaseSummary,
   Decision,
   DistrictId,
   DistrictResult,
@@ -126,6 +127,30 @@ export function computeBaseScore(): number {
   return 0.7 * dAvg + 0.3 * dMin - 1.0 * nCrit;
 }
 
+function weakestOf(rows: { id: DistrictId; score: number }[]): DistrictId {
+  return rows.reduce((min, row) => (row.score < min.score ? row : min)).id;
+}
+
+/** Aggregates of the untouched city, using the same terms as the Score formula. */
+export function baseSummary(): BaseSummary {
+  const districts = DISTRICTS.map((d) => ({
+    id: d.id,
+    nameRu: d.nameRu,
+    populationShare: d.populationShare,
+    score: districtScore(d.indicators),
+    indicators: cloneIndicators(d.indicators),
+    critical: INDICATORS.filter((k) => d.indicators[k] < CRITICAL_THRESHOLD),
+  }));
+  return {
+    score: computeBaseScore(),
+    dAvg: districts.reduce((sum, d) => sum + d.populationShare * d.score, 0),
+    dMin: Math.min(...districts.map((d) => d.score)),
+    nCrit: districts.reduce((sum, d) => sum + d.critical.length, 0),
+    weakestId: weakestOf(districts),
+    districts,
+  };
+}
+
 export function scorePlan(decisions: Decision[]): ScoreResult {
   const validation = validateDecisions(decisions);
   if (!validation.ok) {
@@ -168,6 +193,14 @@ export function scorePlan(decisions: Decision[]): ScoreResult {
   const nCrit = districts.reduce((sum, d) => sum + d.critical.length, 0);
   const score = 0.7 * dAvg + 0.3 * dMin - 1.0 * nCrit;
   const baseScore = computeBaseScore();
+  const summary = baseSummary();
+  const base = {
+    score: summary.score,
+    dAvg: summary.dAvg,
+    dMin: summary.dMin,
+    nCrit: summary.nCrit,
+    weakestId: summary.weakestId,
+  };
 
   return {
     valid: true,
@@ -177,6 +210,8 @@ export function scorePlan(decisions: Decision[]): ScoreResult {
     dAvg,
     dMin,
     nCrit,
+    weakestId: weakestOf(districts.map((d) => ({ id: d.id, score: d.after }))),
+    base,
     cost: validation.cost,
     remaining: validation.remaining,
     districts,

@@ -1,8 +1,10 @@
 "use client";
 
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
-import { useEffect } from "react";
+import { useEffect, useSyncExternalStore } from "react";
 import { cn } from "@/lib/utils";
+
+const noop = () => () => {};
 
 interface NumberTickerProps {
   value: number;
@@ -23,6 +25,7 @@ export function NumberTicker({
   className,
 }: NumberTickerProps) {
   const reduce = useReducedMotion();
+  const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const count = useMotionValue(from ?? value);
   const text = useTransform(count, (latest) => {
     const formatted = latest.toLocaleString("ru-RU", {
@@ -46,10 +49,13 @@ export function NumberTicker({
     maximumFractionDigits: decimals,
   });
 
+  const label = signed && value > 0 ? `+${final}` : final;
+  const instant = reduce && hydrated;
+
   return (
     <span className={cn("tabular-nums", className)}>
-      <motion.span aria-hidden>{text}</motion.span>
-      <span className="sr-only">{signed && value > 0 ? `+${final}` : final}</span>
+      <motion.span aria-hidden>{instant ? label : text}</motion.span>
+      <span className="sr-only">{label}</span>
     </span>
   );
 }

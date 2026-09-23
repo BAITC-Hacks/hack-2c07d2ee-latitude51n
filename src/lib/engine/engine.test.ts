@@ -3,6 +3,7 @@ import {
   EXPECTED_BASE_SCORE,
   EXPECTED_REFERENCE_SCORE,
   REFERENCE_PLAN,
+  baseSummary,
   computeBaseScore,
   improveOneDecision,
   roundScore,
@@ -43,6 +44,24 @@ describe("control values", () => {
     expect(result.nCrit).toBe(0);
     expect(result.synergyHits).toHaveLength(1);
     expect(result.synergyHits[0]).toMatch(/^M10\+M12/);
+  });
+
+  it("base summary reproduces the base score from its own terms", () => {
+    const base = baseSummary();
+    expect(base.score).toBe(computeBaseScore());
+    expect(roundScore(0.7 * base.dAvg + 0.3 * base.dMin - base.nCrit)).toBe(EXPECTED_BASE_SCORE);
+    expect(base.nCrit).toBe(2);
+    expect(base.weakestId).toBe("nura");
+    expect(base.districts.find((d) => d.id === "nura")?.critical).toEqual(["S1", "S2"]);
+  });
+
+  it("reference plan reports the weakest district and base terms", () => {
+    const result = scorePlan(REFERENCE_PLAN);
+    if (!result.valid) throw new Error("reference plan must be valid");
+    const weakest = result.districts.find((d) => d.id === result.weakestId);
+    expect(weakest?.after).toBe(result.dMin);
+    expect(result.base.score).toBe(result.baseScore);
+    expect(result.base.nCrit).toBe(2);
   });
 
   it("cheapest valid plan costs 61", () => {

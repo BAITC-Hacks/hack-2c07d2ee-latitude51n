@@ -2,8 +2,12 @@
 
 import dynamic from "next/dynamic";
 import { useState } from "react";
-import { DistrictMap } from "@/components/DistrictMap";
-import type { DistrictId, DistrictResult } from "@/lib/engine";
+import {
+  DistrictSchematic,
+  type Placement,
+  type SchematicDistrict,
+} from "@/components/DistrictSchematic";
+import type { Decision, DistrictId } from "@/lib/engine";
 import { LEGEND_STOPS, deltaColor, type DistrictView } from "@/lib/geo";
 import { cn } from "@/lib/utils";
 
@@ -16,12 +20,15 @@ const CityMap3D = dynamic(() => import("@/components/CityMap3D"), {
   ),
 });
 
-type Mode = "map" | "schema";
+type Mode = "schema" | "map";
 
 interface Props {
   views: Record<DistrictId, DistrictView>;
-  districts: DistrictResult[] | null;
-  highlightIds: DistrictId[];
+  districts: SchematicDistrict[];
+  scored: boolean;
+  weakestId: DistrictId;
+  placements: Placement[];
+  preview: Decision | null;
   selectedDistrict: DistrictId;
   focusDistrict: DistrictId | null;
   focusKey: number;
@@ -31,13 +38,16 @@ interface Props {
 export function CityMapPanel({
   views,
   districts,
-  highlightIds,
+  scored,
+  weakestId,
+  placements,
+  preview,
   selectedDistrict,
   focusDistrict,
   focusKey,
   onSelect,
 }: Props) {
-  const [mode, setMode] = useState<Mode>("map");
+  const [mode, setMode] = useState<Mode>("schema");
   const [failure, setFailure] = useState<string | null>(null);
   const showMap = mode === "map" && !failure;
 
@@ -49,14 +59,14 @@ export function CityMapPanel({
             Районы Астаны
           </h2>
           <p className="text-xs text-ink-muted">
-            Высота — оценка района. Нажмите на район, чтобы ставить туда районные меры.
+            Нажмите на район, чтобы ставить туда районные меры.
           </p>
         </div>
-        <div className="flex rounded-lg bg-bg p-0.5 text-xs font-medium" role="group" aria-label="Вид карты">
+        <div className="flex rounded-lg bg-bg p-0.5 text-xs font-medium" role="group" aria-label="Вид">
           {(
             [
+              ["schema", "Условная схема"],
               ["map", "3D-карта"],
-              ["schema", "Схема"],
             ] as const
           ).map(([value, label]) => (
             <button
@@ -65,7 +75,7 @@ export function CityMapPanel({
               aria-pressed={mode === value}
               onClick={() => setMode(value)}
               className={cn(
-                "rounded-md px-2.5 py-1 transition-colors",
+                "min-h-9 rounded-md px-3 transition-colors",
                 mode === value ? "bg-surface text-ink shadow-sm" : "text-ink-muted hover:text-ink",
               )}
             >
@@ -76,49 +86,49 @@ export function CityMapPanel({
       </div>
 
       {showMap ? (
-        <>
-          <div className="relative mt-3 h-[380px] sm:h-[440px]">
-            <CityMap3D
-              views={views}
-              selectedDistrict={selectedDistrict}
-              focusDistrict={focusDistrict}
-              focusKey={focusKey}
-              onSelect={onSelect}
-              onFail={setFailure}
-            />
-          </div>
-          <Legend />
-        </>
+        <div className="relative mt-3 h-[380px] sm:h-[440px]">
+          <CityMap3D
+            views={views}
+            selectedDistrict={selectedDistrict}
+            focusDistrict={focusDistrict}
+            focusKey={focusKey}
+            onSelect={onSelect}
+            onFail={setFailure}
+          />
+        </div>
       ) : (
         <div className="p-4 pt-3">
           {failure && mode === "map" && (
             <p className="mb-3 rounded-lg bg-warn-soft px-3 py-2 text-xs text-warn">
-              {failure} Показываем условную схему — расчёт работает так же.
+              {failure} Показываем условную схему: расчёт работает так же.
             </p>
           )}
-          <DistrictMap
+          <DistrictSchematic
             districts={districts}
-            highlightIds={highlightIds}
-            selectedDistrict={selectedDistrict}
+            scored={scored}
+            weakestId={weakestId}
+            placements={placements}
+            preview={preview}
+            selected={selectedDistrict}
             onSelect={onSelect}
-            bare
           />
         </div>
       )}
+      <Legend source={showMap ? "Границы: OpenStreetMap. " : ""} />
     </section>
   );
 }
 
-function Legend() {
+function Legend({ source }: { source: string }) {
   return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 py-3 text-xs text-ink-muted">
+    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-line/60 px-4 py-3 text-xs text-ink-muted">
       {LEGEND_STOPS.map(({ delta, label }) => (
         <span key={label} className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ background: deltaColor(delta) }} aria-hidden />
           {label}
         </span>
       ))}
-      <span className="ml-auto">Границы — OpenStreetMap, показатели синтетические</span>
+      <span className="ml-auto">{source}Показатели синтетические</span>
     </div>
   );
 }
