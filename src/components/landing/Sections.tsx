@@ -18,7 +18,7 @@ export function LandingNav() {
           href="/"
           className="rounded-md font-[family-name:var(--font-display)] text-lg font-bold tracking-tight text-ink"
         >
-          QALA
+          Latitude 51
         </Link>
         <div className="flex items-center gap-7">
           <ul className="hidden items-center gap-7 text-sm text-ink-muted md:flex">
@@ -257,8 +257,8 @@ export function LandingFooter() {
     <footer className="border-t border-line/70">
       <div className="mx-auto grid w-full max-w-7xl gap-4 px-4 py-10 text-sm text-ink-muted sm:px-6 md:grid-cols-2">
         <p>
-          <span className="font-[family-name:var(--font-display)] font-bold text-ink">QALA</span> по-казахски
-          «город». Команда Latitude51N, HackAlem AI.
+          <span className="font-[family-name:var(--font-display)] font-bold text-ink">Latitude 51</span>:
+          Астана лежит на 51-й параллели северной широты. Команда Latitude51N, HackAlem AI.
         </p>
         <p className="md:text-right">
           Границы районов © OpenStreetMap. Показатели районов синтетические, из датасета хакатона.

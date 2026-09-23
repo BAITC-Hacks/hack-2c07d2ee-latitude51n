@@ -321,7 +321,7 @@ export function Simulator({ initialPlan = null }: { initialPlan?: Decision[] | n
             className="inline-flex min-h-10 items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted transition-colors hover:text-ink"
           >
             <ArrowLeftIcon size={16} weight="bold" aria-hidden />
-            <span className="font-[family-name:var(--font-display)] font-bold text-ink">QALA</span>
+            <span className="font-[family-name:var(--font-display)] font-bold text-ink">Latitude 51</span>
           </Link>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-ink sm:text-4xl">
             Аким на 5 часов

@@ -18,10 +18,10 @@ const DESCRIPTION =
   "Симулятор управленческих решений: бюджет 100, пять мер, пять районов Астаны и Astana Quality of Life Score.";
 
 export const metadata: Metadata = {
-  title: "QALA · Аким на 5 часов",
+  title: "Latitude 51 · Аким на 5 часов",
   description: DESCRIPTION,
   openGraph: {
-    title: "QALA · Аким на 5 часов",
+    title: "Latitude 51 · Аким на 5 часов",
     description: DESCRIPTION,
     locale: "ru_RU",
     type: "website",

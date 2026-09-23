@@ -3,7 +3,7 @@ import { Simulator } from "@/components/Simulator";
 import { REFERENCE_PLAN } from "@/lib/engine";
 
 export const metadata: Metadata = {
-  title: "Симулятор · QALA",
+  title: "Симулятор · Latitude 51",
 };
 
 export default async function SimulatorPage({ searchParams }: PageProps<"/simulator">) {

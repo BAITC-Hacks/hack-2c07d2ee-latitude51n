@@ -1,6 +1,6 @@
-# HACKALEM BRIEF — QALA «Аким на 5 часов»
+# HACKALEM BRIEF — Latitude 51 «Аким на 5 часов»
 
-Рабочее название: **QALA**. Команда: Latitude51N. Репозиторий: `BAITC-Hacks/hack-2c07d2ee-latitude51n`.
+Рабочее название: **Latitude 51**. Команда: Latitude51N. Репозиторий: `BAITC-Hacks/hack-2c07d2ee-latitude51n`.
 
 ## Цель за 3 часа
 
