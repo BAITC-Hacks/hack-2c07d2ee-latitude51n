@@ -1,6 +1,8 @@
 import {
   DISTRICT_BY_ID,
   MEASURE_BY_ID,
+  improveOneDecision,
+  scorePlan,
   type Decision,
   type ImproveSuggestion,
   type ScoreBreakdown,
@@ -9,52 +11,64 @@ import { NextResponse } from "next/server";
 
 export const runtime = "nodejs";
 
-interface Body {
-  decisions: Decision[];
-  result: ScoreBreakdown;
-  suggestion?: ImproveSuggestion | null;
+function parseDecisions(input: unknown): Decision[] | null {
+  if (!Array.isArray(input) || input.length > 10) return null;
+  const out: Decision[] = [];
+  for (const item of input) {
+    if (!item || typeof item !== "object") return null;
+    const { measureId, districtId } = item as Record<string, unknown>;
+    if (typeof measureId !== "string") return null;
+    if (districtId !== undefined && typeof districtId !== "string") return null;
+    out.push({
+      measureId: measureId as Decision["measureId"],
+      ...(districtId ? { districtId: districtId as Decision["districtId"] } : {}),
+    });
+  }
+  return out;
 }
 
-function buildPrompt(body: Body): string {
-  const { decisions, result, suggestion } = body;
+function describeDecision(d: Decision): string {
+  const m = MEASURE_BY_ID[d.measureId];
+  const where = d.districtId ? DISTRICT_BY_ID[d.districtId].nameRu : "весь город";
+  return `${m.id} «${m.nameRu}» → ${where}`;
+}
+
+function buildPrompt(
+  decisions: Decision[],
+  result: ScoreBreakdown,
+  suggestion: ImproveSuggestion | null,
+): string {
   const plan = decisions
     .map((d) => {
       const m = MEASURE_BY_ID[d.measureId];
-      const where = d.districtId
-        ? DISTRICT_BY_ID[d.districtId].nameRu
-        : "весь город";
-      return `- ${m.id} «${m.nameRu}» → ${where} (стоимость ${m.cost}, лаг ${m.lag})`;
+      return `- ${describeDecision(d)} (стоимость ${m.cost}, лаг ${m.lag} кв., реализовано ${((8 - m.lag) / 8) * 100}% эффекта)`;
     })
     .join("\n");
 
   const districts = result.districts
     .map(
       (d) =>
-        `- ${d.nameRu}: D ${d.before.toFixed(2)} → ${d.after.toFixed(2)} (Δ ${d.delta >= 0 ? "+" : ""}${d.delta.toFixed(2)})${
-          d.critical.length ? `; критические: ${d.critical.join(", ")}` : ""
+        `- ${d.nameRu} (доля населения ${d.populationShare}): D ${d.before.toFixed(2)} → ${d.after.toFixed(2)} (Δ ${d.delta >= 0 ? "+" : ""}${d.delta.toFixed(2)})${
+          d.critical.length ? `; ниже 40: ${d.critical.join(", ")}` : ""
         }`,
     )
     .join("\n");
 
   const improve = suggestion
-    ? `Предложенная замена одной меры: ${suggestion.from.measureId} → ${suggestion.to.measureId}, новый Score ${suggestion.score.toFixed(5)} (Δ +${suggestion.scoreDelta.toFixed(5)}). Победитель по приросту района: ${
+    ? `Лучшая замена одной меры, найденная перебором: ${describeDecision(suggestion.from)} заменить на ${describeDecision(suggestion.to)}. Новый Score ${suggestion.score.toFixed(5)} (Δ +${suggestion.scoreDelta.toFixed(5)}), стоимость ${suggestion.cost}. Сильнее всего растёт район: ${
         suggestion.winnerDistrictId
-          ? DISTRICT_BY_ID[suggestion.winnerDistrictId].nameRu
-          : "н/д"
+          ? `${DISTRICT_BY_ID[suggestion.winnerDistrictId].nameRu} (+${suggestion.winnerDistrictDelta.toFixed(2)} к D)`
+          : "нет явного лидера"
       }.`
-    : "Замена одной меры пока не искалась.";
+    : "Перебор не нашёл замены одной меры, которая повышает Score.";
 
-  return `Ты — аналитик городского планирования для симулятора QALA («Аким на 5 часов»).
-Числа уже посчитаны детерминированным движком. НЕ пересчитывай и НЕ выдумывай новые цифры.
-Используй только данные ниже.
-
-План:
+  return `План:
 ${plan}
 
 Итог:
-- Score: ${result.score.toFixed(5)} (база ${result.baseScore.toFixed(5)}, Δ ${result.scoreDelta >= 0 ? "+" : ""}${result.scoreDelta.toFixed(5)})
-- D_avg: ${result.dAvg.toFixed(4)}, min D: ${result.dMin.toFixed(4)}, N_crit: ${result.nCrit}
-- Стоимость: ${result.cost}, остаток: ${result.remaining}
+- Astana Quality of Life Score: ${result.score.toFixed(5)} (без действий ${result.baseScore.toFixed(5)}, Δ ${result.scoreDelta >= 0 ? "+" : ""}${result.scoreDelta.toFixed(5)})
+- Средний по населению D_avg: ${result.dAvg.toFixed(4)}; самый слабый район min D: ${result.dMin.toFixed(4)}; критических значений (<40): ${result.nCrit}
+- Потрачено ${result.cost} из 100, остаток ${result.remaining}
 - Синергии: ${result.synergyHits.length ? result.synergyHits.join("; ") : "нет"}
 
 Районы:
@@ -62,41 +76,46 @@ ${districts}
 
 ${improve}
 
-Напиши на русском 3 коротких абзаца:
-1) сильные стороны плана;
-2) риски и оставшиеся компромиссы (кто проигрывает или остаётся слабым);
-3) один конкретный следующий шаг (если есть suggestion — опиши его; иначе предложи направление без новых чисел).
-Без маркеров markdown, без таблиц.`;
+Напиши на русском три коротких абзаца без markdown:
+1) Сильные стороны: какие районы и показатели выиграли и почему.
+2) Риски и компромиссы: кто остался слабым, что съел лаг, какие проблемы не закрыты.
+3) Следующий шаг: опиши найденную замену и её цену; если замены нет, назови направление без новых чисел.`;
 }
 
+const SYSTEM_PROMPT =
+  "Ты аналитик городского планирования в симуляторе «Аким на 5 часов». Все числа уже посчитаны детерминированным движком. Не пересчитывай, не округляй по-своему и не придумывай цифры: используй только значения из сообщения пользователя.";
+
 export async function POST(req: Request) {
+  let raw: unknown;
+  try {
+    raw = await req.json();
+  } catch {
+    return NextResponse.json({ error: "Некорректный JSON." }, { status: 400 });
+  }
+
+  const decisions = parseDecisions((raw as { decisions?: unknown })?.decisions);
+  if (!decisions) {
+    return NextResponse.json({ error: "Нужен массив decisions." }, { status: 400 });
+  }
+
+  const result = scorePlan(decisions);
+  if (!result.valid) {
+    return NextResponse.json(
+      { error: `План недопустим: ${result.errors.join(" ")}` },
+      { status: 422 },
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
-      {
-        error:
-          "Нет OPENAI_API_KEY в .env.local. Добавьте ключ и перезапустите dev-сервер.",
-      },
+      { error: "Нет OPENAI_API_KEY в .env.local. Добавьте ключ и перезапустите сервер." },
       { status: 503 },
     );
   }
 
-  let body: Body;
-  try {
-    body = (await req.json()) as Body;
-  } catch {
-    return NextResponse.json({ error: "Некорректный JSON" }, { status: 400 });
-  }
-
-  if (!body?.result?.valid || !Array.isArray(body.decisions)) {
-    return NextResponse.json(
-      { error: "Нужен валидный результат расчёта" },
-      { status: 400 },
-    );
-  }
-
-  const model = process.env.OPENAI_MODEL ?? "gpt-4o-mini";
-  const prompt = buildPrompt(body);
+  const suggestion = improveOneDecision(decisions);
+  const model = process.env.OPENAI_MODEL || "gpt-4o-mini";
 
   try {
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
@@ -107,22 +126,19 @@ export async function POST(req: Request) {
       },
       body: JSON.stringify({
         model,
-        temperature: 0.4,
+        temperature: 0.3,
         messages: [
-          {
-            role: "system",
-            content:
-              "Ты объясняешь готовые расчёты городского симулятора. Не считаешь Score сам.",
-          },
-          { role: "user", content: prompt },
+          { role: "system", content: SYSTEM_PROMPT },
+          { role: "user", content: buildPrompt(decisions, result, suggestion) },
         ],
       }),
+      signal: AbortSignal.timeout(45_000),
     });
 
     if (!response.ok) {
-      const errText = await response.text();
+      const detail = await response.text();
       return NextResponse.json(
-        { error: `OpenAI error ${response.status}: ${errText.slice(0, 240)}` },
+        { error: `OpenAI вернул ${response.status}: ${detail.slice(0, 240)}` },
         { status: 502 },
       );
     }
@@ -132,19 +148,14 @@ export async function POST(req: Request) {
     };
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) {
-      return NextResponse.json(
-        { error: "Пустой ответ модели" },
-        { status: 502 },
-      );
+      return NextResponse.json({ error: "Модель вернула пустой ответ." }, { status: 502 });
     }
 
-    return NextResponse.json({ text });
+    return NextResponse.json({ text, model, score: result.score });
   } catch (e) {
+    const timeout = e instanceof Error && e.name === "TimeoutError";
     return NextResponse.json(
-      {
-        error:
-          e instanceof Error ? e.message : "Ошибка запроса к OpenAI",
-      },
+      { error: timeout ? "OpenAI не ответил за 45 секунд." : "Не удалось связаться с OpenAI." },
       { status: 502 },
     );
   }

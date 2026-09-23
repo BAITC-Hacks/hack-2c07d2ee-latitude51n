@@ -1,5 +1,6 @@
 import {
   BUDGET,
+  DIRECTION_LABELS,
   DISTRICT_BY_ID,
   MAX_PER_DIRECTION,
   MEASURE_BY_ID,
@@ -14,12 +15,15 @@ function costOf(decisions: Decision[]): number {
   }, 0);
 }
 
-export function validateDecisions(decisions: Decision[]): ValidationResult {
+export function validateDecisions(
+  decisions: Decision[],
+  { partial = false }: { partial?: boolean } = {},
+): ValidationResult {
   const errors: string[] = [];
   const cost = costOf(decisions);
   const remaining = BUDGET - cost;
 
-  if (decisions.length !== REQUIRED_DECISIONS) {
+  if (partial ? decisions.length > REQUIRED_DECISIONS : decisions.length !== REQUIRED_DECISIONS) {
     errors.push(
       `Нужно ровно ${REQUIRED_DECISIONS} мероприятий (сейчас ${decisions.length}).`,
     );
@@ -67,7 +71,7 @@ export function validateDecisions(decisions: Decision[]): ValidationResult {
   for (const [direction, count] of Object.entries(directionCounts)) {
     if ((count ?? 0) > MAX_PER_DIRECTION) {
       errors.push(
-        `Не больше ${MAX_PER_DIRECTION} мер одного направления (нарушено: ${direction}).`,
+        `Не больше ${MAX_PER_DIRECTION} мер одного направления: «${DIRECTION_LABELS[direction as Direction]}» — ${count}.`,
       );
     }
   }
@@ -84,7 +88,7 @@ export function validateDecisions(decisions: Decision[]): ValidationResult {
   const m7 = districtOf("M7");
   if (m4 && m7 && m4 === m7) {
     errors.push(
-      `Несовместимость: M4 и M7 нельзя в одном районе (${m4}).`,
+      `Несовместимость: M4 и M7 нельзя в одном районе (${DISTRICT_BY_ID[m4]?.nameRu ?? m4}) — конфликт за участок.`,
     );
   }
 
@@ -92,7 +96,7 @@ export function validateDecisions(decisions: Decision[]): ValidationResult {
   const m13 = districtOf("M13");
   if (m5 && m13 && m5 === m13) {
     errors.push(
-      `Несовместимость: M5 и M13 нельзя в одном районе (${m5}).`,
+      `Несовместимость: M5 и M13 нельзя в одном районе (${DISTRICT_BY_ID[m5]?.nameRu ?? m5}) — программы дублируются.`,
     );
   }
 

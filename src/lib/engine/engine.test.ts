@@ -8,109 +8,223 @@ import {
   roundScore,
   scorePlan,
   validateDecisions,
+  type Decision,
 } from "./index";
 
-describe("QALA score engine", () => {
-  it("matches base score 52.55768", () => {
+const CHEAPEST: Decision[] = [
+  { measureId: "M9", districtId: "nura" },
+  { measureId: "M11", districtId: "nura" },
+  { measureId: "M10", districtId: "nura" },
+  { measureId: "M12" },
+  { measureId: "M4", districtId: "saryarka" },
+];
+
+function expectRejected(plan: Decision[], fragment: string) {
+  const v = validateDecisions(plan);
+  expect(v.ok).toBe(false);
+  expect(v.errors.some((e) => e.includes(fragment))).toBe(true);
+  const scored = scorePlan(plan);
+  expect(scored.valid).toBe(false);
+  expect("score" in scored).toBe(false);
+}
+
+describe("control values", () => {
+  it("base score is 52.55768", () => {
     expect(roundScore(computeBaseScore())).toBe(EXPECTED_BASE_SCORE);
   });
 
-  it("matches organizers reference plan ≈ 56.54307", () => {
+  it("organizers' reference plan scores 56.54307 at cost 95", () => {
     const result = scorePlan(REFERENCE_PLAN);
     expect(result.valid).toBe(true);
     if (!result.valid) return;
     expect(result.cost).toBe(95);
+    expect(result.remaining).toBe(5);
     expect(roundScore(result.score)).toBe(EXPECTED_REFERENCE_SCORE);
-    expect(result.synergyHits.some((s) => s.startsWith("M10+M12"))).toBe(true);
     expect(result.nCrit).toBe(0);
+    expect(result.synergyHits).toHaveLength(1);
+    expect(result.synergyHits[0]).toMatch(/^M10\+M12/);
   });
 
-  it("rejects over-budget plans without scoring", () => {
-    const plan = [
-      { measureId: "M3" as const, districtId: "esil" as const },
-      { measureId: "M5" as const, districtId: "saryarka" as const },
-      { measureId: "M7" as const, districtId: "nura" as const },
-      { measureId: "M13" as const, districtId: "almaty" as const },
-      { measureId: "M2" as const },
-    ];
-    const v = validateDecisions(plan);
-    expect(v.ok).toBe(false);
-    expect(v.cost).toBeGreaterThan(100);
-    const scored = scorePlan(plan);
-    expect(scored.valid).toBe(false);
-  });
-
-  it("rejects more than 2 measures of one direction", () => {
-    const plan = [
-      { measureId: "M1" as const, districtId: "esil" as const },
-      { measureId: "M2" as const },
-      { measureId: "M11" as const, districtId: "nura" as const }, // wait need 3 transport - M1 M2 and need another transport - only M3 left but M1+M3 incompatible
-      { measureId: "M4" as const, districtId: "nura" as const },
-      { measureId: "M12" as const },
-    ];
-    // Use M7 M8 M9 - 3 social
-    const socialHeavy = [
-      { measureId: "M7" as const, districtId: "nura" as const },
-      { measureId: "M8" as const, districtId: "nura" as const },
-      { measureId: "M9" as const, districtId: "esil" as const },
-      { measureId: "M10" as const, districtId: "almaty" as const },
-      { measureId: "M12" as const },
-    ];
-    const v = validateDecisions(socialHeavy);
-    expect(v.ok).toBe(false);
-    expect(v.errors.some((e) => e.includes("направления"))).toBe(true);
-    void plan;
-  });
-
-  it("rejects M1+M3 incompatibility", () => {
-    const plan = [
-      { measureId: "M1" as const, districtId: "esil" as const },
-      { measureId: "M3" as const, districtId: "almaty" as const },
-      { measureId: "M10" as const, districtId: "nura" as const },
-      { measureId: "M12" as const },
-      { measureId: "M4" as const, districtId: "saryarka" as const },
-    ];
-    expect(validateDecisions(plan).ok).toBe(false);
-  });
-
-  it("rejects M4+M7 same district", () => {
-    const plan = [
-      { measureId: "M4" as const, districtId: "nura" as const },
-      { measureId: "M7" as const, districtId: "nura" as const },
-      { measureId: "M10" as const, districtId: "esil" as const },
-      { measureId: "M12" as const },
-      { measureId: "M11" as const, districtId: "almaty" as const },
-    ];
-    expect(validateDecisions(plan).ok).toBe(false);
-  });
-
-  it("accepts cheapest valid pack M9+M11+M10+M12+M4", () => {
-    const plan = [
-      { measureId: "M9" as const, districtId: "nura" as const },
-      { measureId: "M11" as const, districtId: "nura" as const },
-      { measureId: "M10" as const, districtId: "nura" as const },
-      { measureId: "M12" as const },
-      { measureId: "M4" as const, districtId: "saryarka" as const },
-    ];
-    const v = validateDecisions(plan);
+  it("cheapest valid plan costs 61", () => {
+    const v = validateDecisions(CHEAPEST);
     expect(v.ok).toBe(true);
     expect(v.cost).toBe(61);
-    expect(scorePlan(plan).valid).toBe(true);
+  });
+});
+
+describe("rules", () => {
+  it("requires exactly five decisions", () => {
+    expectRejected(CHEAPEST.slice(0, 4), "ровно 5");
   });
 
-  it("improveOneDecision finds a better swap for a weak plan", () => {
-    const weak = [
-      { measureId: "M9" as const, districtId: "baikonur" as const },
-      { measureId: "M11" as const, districtId: "baikonur" as const },
-      { measureId: "M10" as const, districtId: "baikonur" as const },
-      { measureId: "M12" as const },
-      { measureId: "M4" as const, districtId: "baikonur" as const },
+  it("forbids repeating a measure", () => {
+    expectRejected(
+      [
+        { measureId: "M10", districtId: "nura" },
+        { measureId: "M10", districtId: "esil" },
+        { measureId: "M9", districtId: "nura" },
+        { measureId: "M12" },
+        { measureId: "M4", districtId: "saryarka" },
+      ],
+      "Повторы",
+    );
+  });
+
+  it("rejects plans over budget 100", () => {
+    expectRejected(
+      [
+        { measureId: "M3", districtId: "esil" },
+        { measureId: "M5", districtId: "saryarka" },
+        { measureId: "M7", districtId: "nura" },
+        { measureId: "M13", districtId: "almaty" },
+        { measureId: "M2" },
+      ],
+      "бюджет",
+    );
+  });
+
+  it("allows at most two measures per direction", () => {
+    expectRejected(
+      [
+        { measureId: "M7", districtId: "nura" },
+        { measureId: "M8", districtId: "nura" },
+        { measureId: "M9", districtId: "esil" },
+        { measureId: "M10", districtId: "almaty" },
+        { measureId: "M12" },
+      ],
+      "направления",
+    );
+  });
+
+  it("requires a district for district measures", () => {
+    expectRejected(
+      [{ measureId: "M9" }, ...CHEAPEST.slice(1)],
+      "укажите район",
+    );
+  });
+
+  it("forbids a district for city measures", () => {
+    expectRejected(
+      [...CHEAPEST.slice(0, 3), { measureId: "M12", districtId: "nura" }, CHEAPEST[4]],
+      "район не указывается",
+    );
+  });
+
+  it("forbids M1 with M3 in any districts", () => {
+    expectRejected(
+      [
+        { measureId: "M1", districtId: "esil" },
+        { measureId: "M3", districtId: "almaty" },
+        { measureId: "M10", districtId: "nura" },
+        { measureId: "M12" },
+        { measureId: "M4", districtId: "saryarka" },
+      ],
+      "M1 и M3",
+    );
+  });
+
+  it("forbids M4 with M7 in the same district only", () => {
+    const base: Decision[] = [
+      { measureId: "M10", districtId: "esil" },
+      { measureId: "M12" },
+      { measureId: "M11", districtId: "almaty" },
     ];
+    expectRejected(
+      [
+        { measureId: "M4", districtId: "nura" },
+        { measureId: "M7", districtId: "nura" },
+        ...base,
+      ],
+      "M4 и M7",
+    );
+    expect(
+      validateDecisions([
+        { measureId: "M4", districtId: "saryarka" },
+        { measureId: "M7", districtId: "nura" },
+        ...base,
+      ]).ok,
+    ).toBe(true);
+  });
+
+  it("forbids M5 with M13 in the same district only", () => {
+    const base: Decision[] = [
+      { measureId: "M10", districtId: "esil" },
+      { measureId: "M9", districtId: "nura" },
+      { measureId: "M11", districtId: "almaty" },
+    ];
+    expectRejected(
+      [
+        { measureId: "M5", districtId: "saryarka" },
+        { measureId: "M13", districtId: "saryarka" },
+        ...base,
+      ],
+      "M5 и M13",
+    );
+    expect(
+      validateDecisions([
+        { measureId: "M5", districtId: "saryarka" },
+        { measureId: "M13", districtId: "almaty" },
+        ...base,
+      ]).ok,
+    ).toBe(true);
+  });
+
+  it("ignores decision order", () => {
+    const a = scorePlan(REFERENCE_PLAN);
+    const b = scorePlan([...REFERENCE_PLAN].reverse());
+    expect(a.valid && b.valid).toBe(true);
+    if (!a.valid || !b.valid) return;
+    expect(b.score).toBeCloseTo(a.score, 10);
+  });
+});
+
+describe("model behaviour", () => {
+  it("changing the plan changes the score", () => {
+    const a = scorePlan(REFERENCE_PLAN);
+    const b = scorePlan(CHEAPEST);
+    expect(a.valid && b.valid).toBe(true);
+    if (!a.valid || !b.valid) return;
+    expect(a.score).not.toBeCloseTo(b.score, 5);
+  });
+
+  it("applies city measures to all five districts", () => {
+    const result = scorePlan(CHEAPEST);
+    if (!result.valid) throw new Error("expected valid");
+    for (const d of result.districts) {
+      expect(d.indicatorsAfter.C2 - d.indicatorsBefore.C2).toBeCloseTo(5 * (7 / 8), 10);
+    }
+  });
+
+  it("scales effects by lag (8 - L) / 8", () => {
+    const result = scorePlan(REFERENCE_PLAN);
+    if (!result.valid) throw new Error("expected valid");
+    const nura = result.districts.find((d) => d.id === "nura")!;
+    // M7 in Nura: S1 +16, lag 3 → +10
+    expect(nura.indicatorsAfter.S1 - nura.indicatorsBefore.S1).toBeCloseTo(10, 10);
+  });
+});
+
+describe("improveOneDecision", () => {
+  it("finds a valid, strictly better single swap", () => {
+    const weak: Decision[] = [
+      { measureId: "M9", districtId: "baikonur" },
+      { measureId: "M11", districtId: "baikonur" },
+      { measureId: "M10", districtId: "baikonur" },
+      { measureId: "M12" },
+      { measureId: "M4", districtId: "baikonur" },
+    ];
+    const before = scorePlan(weak);
+    if (!before.valid) throw new Error("expected valid");
     const suggestion = improveOneDecision(weak);
     expect(suggestion).not.toBeNull();
     if (!suggestion) return;
-    expect(suggestion.score).toBeGreaterThan(
-      roundScore((scorePlan(weak) as { score: number }).score),
-    );
+    expect(suggestion.score).toBeGreaterThan(before.score);
+    const next = weak.map((d, i) => (i === suggestion.replaceIndex ? suggestion.to : d));
+    expect(validateDecisions(next).ok).toBe(true);
+    expect(roundScore((scorePlan(next) as { score: number }).score)).toBe(suggestion.score);
+  });
+
+  it("returns null for invalid plans", () => {
+    expect(improveOneDecision(CHEAPEST.slice(0, 4))).toBeNull();
   });
 });
