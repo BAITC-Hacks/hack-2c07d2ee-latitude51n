@@ -80,7 +80,7 @@ export function PlanBuilder({
                 type="button"
                 onClick={() => onSelectSlot(index)}
                 aria-pressed={active}
-                className="block w-full rounded-xl px-3 pb-8 pt-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                className="block w-full rounded-xl px-3 pb-10 pt-3 text-left transition-transform duration-150 ease-out motion-safe:active:scale-[0.98]"
               >
                 <span className="block text-[11px] font-medium text-ink-muted">
                   Решение {index + 1}
@@ -109,7 +109,8 @@ export function PlanBuilder({
                 <button
                   type="button"
                   onClick={() => onClearSlot(index)}
-                  className="absolute bottom-2 left-3 text-xs text-warn underline-offset-2 hover:underline focus-visible:underline"
+                  aria-label={`Убрать ${measure.id} из решения ${index + 1}`}
+                  className="absolute bottom-1 left-1.5 inline-flex min-h-8 items-center rounded-lg px-1.5 text-xs font-medium text-warn underline-offset-2 hover:underline focus-visible:underline"
                 >
                   Убрать
                 </button>
@@ -128,7 +129,7 @@ export function PlanBuilder({
             onClick={() => onSetDistrict(d.id)}
             aria-pressed={districtForPicker === d.id}
             className={cn(
-              "rounded-lg border px-2.5 py-1 text-xs font-medium transition-colors",
+              "min-h-9 rounded-lg border px-3 text-xs font-medium transition-[background-color,border-color,transform] duration-150 ease-out motion-safe:active:scale-[0.97]",
               districtForPicker === d.id
                 ? "border-ink bg-ink text-white"
                 : "border-line bg-bg text-ink hover:border-ink/40",
@@ -151,7 +152,7 @@ export function PlanBuilder({
         onValueChange={setFilter}
         className="mb-3 flex-wrap gap-1 rounded-xl bg-bg p-1"
         indicatorClassName="rounded-lg bg-surface shadow-sm ring-1 ring-line"
-        tabClassName="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors data-[checked=true]:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+        tabClassName="min-h-9 rounded-lg px-3 text-xs font-medium text-ink-muted transition-colors data-[checked=true]:text-ink"
         tabs={[
           { id: "all", label: "Все" },
           ...DIRECTIONS.map((dir) => ({
@@ -188,12 +189,12 @@ export function PlanBuilder({
               disabled={Boolean(blocker)}
               onClick={() => onPickMeasure(m.id)}
               className={cn(
-                "rounded-xl border px-3 py-2.5 text-left transition-colors",
+                "rounded-xl border px-3 py-2.5 text-left transition-[background-color,border-color,transform] duration-150 ease-out",
                 inActive
                   ? "border-teal bg-teal-soft"
                   : blocker
                     ? "cursor-not-allowed border-line bg-bg/60"
-                    : "border-line bg-bg hover:border-teal hover:bg-teal-soft/40",
+                    : "border-line bg-bg hover:border-teal hover:bg-teal-soft/40 motion-safe:active:scale-[0.98]",
               )}
             >
               <span className="flex items-start justify-between gap-2">
@@ -220,19 +221,27 @@ export function PlanBuilder({
 }
 
 function BudgetMeter({ cost }: { cost: number }) {
-  const pct = Math.min(100, (cost / BUDGET) * 100);
+  const share = Math.min(1, cost / BUDGET);
   return (
-    <div className="min-w-[180px]" aria-label={`Потрачено ${cost} из ${BUDGET}`}>
-      <div className="mb-1 flex justify-between text-xs">
+    <div
+      className="min-w-[180px]"
+      role="meter"
+      aria-label="Бюджет"
+      aria-valuemin={0}
+      aria-valuemax={BUDGET}
+      aria-valuenow={cost}
+      aria-valuetext={`Потрачено ${cost} из ${BUDGET}, остаток ${BUDGET - cost}`}
+    >
+      <div className="mb-1 flex justify-between gap-3 text-xs">
         <span className="text-ink-muted">Бюджет</span>
-        <span className="font-semibold">
+        <span className="font-semibold tabular-nums">
           {cost} / {BUDGET} · остаток {BUDGET - cost}
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-bg-deep">
         <div
-          className="h-full rounded-full bg-teal transition-[width] duration-300"
-          style={{ width: `${pct}%` }}
+          className="h-full origin-left rounded-full bg-teal transition-transform duration-300 ease-out"
+          style={{ transform: `scaleX(${share})` }}
         />
       </div>
     </div>

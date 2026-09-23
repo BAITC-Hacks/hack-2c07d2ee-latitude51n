@@ -9,7 +9,7 @@ import { fmt } from "@/lib/utils";
 
 export function LandingNav() {
   return (
-    <header className="sticky top-0 z-30 border-b border-line/70 bg-bg/80 backdrop-blur-md">
+    <header className="glass-bar sticky top-0 z-30">
       <nav
         aria-label="Главное меню"
         className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between gap-6 px-4 sm:px-6"
@@ -23,17 +23,17 @@ export function LandingNav() {
         <div className="flex items-center gap-7">
           <ul className="hidden items-center gap-7 text-sm text-ink-muted md:flex">
             <li>
-              <a href="#story" className="rounded-md hover:text-ink">
+              <a href="#story" className="inline-flex min-h-10 items-center rounded-md px-1 transition-colors hover:text-ink">
                 Как это работает
               </a>
             </li>
             <li>
-              <a href="#rules" className="rounded-md hover:text-ink">
+              <a href="#rules" className="inline-flex min-h-10 items-center rounded-md px-1 transition-colors hover:text-ink">
                 Правила
               </a>
             </li>
             <li>
-              <a href="#formula" className="rounded-md hover:text-ink">
+              <a href="#formula" className="inline-flex min-h-10 items-center rounded-md px-1 transition-colors hover:text-ink">
                 Формула
               </a>
             </li>

@@ -94,8 +94,14 @@ function ValidResults({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-ink-muted">Astana Quality of Life Score</p>
-            <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight text-ink">
-              <NumberTicker value={result.score} from={result.baseScore} decimals={5} duration={1.1} />
+            <p
+              aria-hidden
+              className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight text-ink tabular-nums"
+            >
+              <NumberTicker value={result.score} from={result.baseScore} decimals={5} duration={0.6} />
+            </p>
+            <p className="sr-only" role="status">
+              Score {fmt(result.score, 5)}
             </p>
             <p className="mt-1 text-sm text-ink-muted">
               Без действий {fmt(result.baseScore, 5)}, изменение{" "}
@@ -103,7 +109,7 @@ function ValidResults({
                 value={result.scoreDelta}
                 from={0}
                 decimals={5}
-                duration={1.1}
+                duration={0.6}
                 signed
                 className={cn("font-semibold", result.scoreDelta >= 0 ? "text-good" : "text-crit")}
               />
@@ -172,7 +178,7 @@ function ValidResults({
               type="button"
               onClick={onImprove}
               disabled={improveLoading}
-              className="rounded-xl bg-teal px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-teal-deep disabled:opacity-50"
+              className="min-h-11 rounded-xl bg-teal-deep px-4 text-sm font-medium text-white transition-[background-color,transform] duration-150 ease-out hover:bg-ink motion-safe:active:scale-[0.97] disabled:opacity-50"
             >
               {improveLoading ? "Перебираем…" : "Найти лучшую замену"}
             </button>
@@ -180,12 +186,13 @@ function ValidResults({
               <button
                 type="button"
                 onClick={onApplyImprove}
-                className="rounded-xl border border-teal px-4 py-2 text-sm font-medium text-teal-deep hover:bg-teal-soft"
+                className="min-h-11 rounded-xl border border-teal px-4 text-sm font-medium text-teal-deep transition-[background-color,transform] duration-150 ease-out hover:bg-teal-soft motion-safe:active:scale-[0.97]"
               >
                 Применить замену
               </button>
             )}
           </div>
+          <div aria-live="polite">
           <AnimatePresence mode="wait">
             {suggestion ? (
               <motion.div
@@ -200,6 +207,7 @@ function ValidResults({
               <p className="mt-3 text-sm text-ink-muted">{improveNote}</p>
             ) : null}
           </AnimatePresence>
+          </div>
         </div>
 
         <div className="rounded-2xl border border-line bg-surface p-5">
@@ -212,7 +220,7 @@ function ValidResults({
             type="button"
             onClick={onAnalyze}
             disabled={analysisLoading}
-            className="mt-3 rounded-xl bg-ink px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-ink/90 disabled:opacity-50"
+            className="mt-3 min-h-11 rounded-xl bg-ink px-4 text-sm font-medium text-white transition-[background-color,transform] duration-150 ease-out hover:bg-teal-deep motion-safe:active:scale-[0.97] disabled:opacity-50"
           >
             {analysisLoading ? "Готовим разбор…" : analysis ? "Обновить разбор" : "Объяснить сценарий"}
           </button>

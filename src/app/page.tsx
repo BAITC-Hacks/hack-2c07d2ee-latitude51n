@@ -13,7 +13,7 @@ export default function Home() {
   return (
     <>
       <LandingNav />
-      <main>
+      <main id="main" tabIndex={-1} className="outline-none">
         <LandingStory data={data} />
         <RulesSection />
         <FormulaSection />

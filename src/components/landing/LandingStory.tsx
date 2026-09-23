@@ -71,7 +71,7 @@ export function LandingStory({ data }: { data: LandingData }) {
     >
       <div
         ref={visual}
-        className="sticky top-16 z-10 -mx-4 h-[42dvh] self-start bg-bg/85 backdrop-blur-sm sm:-mx-6 lg:col-start-2 lg:row-start-1 lg:mx-0 lg:h-[calc(100dvh-4rem)] lg:bg-transparent lg:backdrop-blur-none"
+        className="sticky top-16 z-10 -mx-4 h-[42dvh] self-start bg-bg sm:-mx-6 lg:col-start-2 lg:row-start-1 lg:mx-0 lg:h-[calc(100dvh-4rem)] lg:bg-transparent"
       >
         <div className="absolute inset-0">
           {webgl ? (
