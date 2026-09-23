@@ -9,6 +9,7 @@ import {
   type ScoreBreakdown,
   type ScoreResult,
 } from "@/lib/engine";
+import { NumberTicker } from "@/components/ui/number-ticker";
 import { cn, fmt } from "@/lib/utils";
 
 interface Props {
@@ -93,21 +94,19 @@ function ValidResults({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-sm text-ink-muted">Astana Quality of Life Score</p>
-            <motion.p
-              key={result.score.toFixed(5)}
-              initial={reduce ? false : { opacity: 0.3, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.35 }}
-              className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight tabular-nums text-ink"
-            >
-              {fmt(result.score, 5)}
-            </motion.p>
+            <p className="font-[family-name:var(--font-display)] text-5xl font-bold tracking-tight text-ink">
+              <NumberTicker value={result.score} from={result.baseScore} decimals={5} duration={1.1} />
+            </p>
             <p className="mt-1 text-sm text-ink-muted">
               Без действий {fmt(result.baseScore, 5)}, изменение{" "}
-              <span className={cn("font-semibold", result.scoreDelta >= 0 ? "text-good" : "text-crit")}>
-                {result.scoreDelta >= 0 ? "+" : ""}
-                {fmt(result.scoreDelta, 5)}
-              </span>
+              <NumberTicker
+                value={result.scoreDelta}
+                from={0}
+                decimals={5}
+                duration={1.1}
+                signed
+                className={cn("font-semibold", result.scoreDelta >= 0 ? "text-good" : "text-crit")}
+              />
             </p>
           </div>
           <dl className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-4">

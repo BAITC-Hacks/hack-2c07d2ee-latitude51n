@@ -1,14 +1,17 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { DistrictMap } from "@/components/DistrictMap";
+import { CityMapPanel } from "@/components/CityMapPanel";
+import { HeroScene } from "@/components/HeroScene";
 import { PlanBuilder } from "@/components/PlanBuilder";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import {
   BUDGET,
+  DISTRICTS,
   MEASURES,
   MEASURE_BY_ID,
   REFERENCE_PLAN,
+  baseDistrictScores,
   improveOneDecision,
   scorePlan,
   validateDecisions,
@@ -18,11 +21,40 @@ import {
   type ImproveSuggestion,
   type MeasureId,
 } from "@/lib/engine";
+import type { DistrictView } from "@/lib/geo";
 
 const EMPTY: (Decision | null)[] = [null, null, null, null, null];
+const BASE_SCORES = baseDistrictScores();
 
 function decisionFor(measureId: MeasureId, districtId: DistrictId): Decision {
   return MEASURE_BY_ID[measureId].scope === "city" ? { measureId } : { measureId, districtId };
+}
+
+function viewsFor(slots: (Decision | null)[]): Record<DistrictId, DistrictView> {
+  const filled = slots.filter((d): d is Decision => d !== null);
+  const result = filled.length === 5 ? scorePlan(filled) : null;
+  return Object.fromEntries(
+    DISTRICTS.map((d) => {
+      const row = result?.valid ? result.districts.find((r) => r.id === d.id) : null;
+      return [d.id, row ? { after: row.after, delta: row.delta } : { after: BASE_SCORES[d.id], delta: 0 }];
+    }),
+  ) as Record<DistrictId, DistrictView>;
+}
+
+function mostChanged(
+  prev: Record<DistrictId, DistrictView>,
+  next: Record<DistrictId, DistrictView>,
+): DistrictId | null {
+  let best: DistrictId | null = null;
+  let bestShift = 0.01;
+  for (const d of DISTRICTS) {
+    const shift = Math.abs(next[d.id].after - prev[d.id].after);
+    if (shift > bestShift) {
+      best = d.id;
+      bestShift = shift;
+    }
+  }
+  return best;
 }
 
 export function Simulator() {
@@ -35,8 +67,10 @@ export function Simulator() {
   const [improveNote, setImproveNote] = useState<string | null>(null);
   const [analysisLoading, startAnalysis] = useTransition();
   const [improveLoading, startImprove] = useTransition();
+  const [focus, setFocus] = useState<{ id: DistrictId | null; key: number }>({ id: null, key: 0 });
 
   const filled = useMemo(() => slots.filter((d): d is Decision => d !== null), [slots]);
+  const views = useMemo(() => viewsFor(slots), [slots]);
 
   const cost = filled.reduce((sum, d) => sum + MEASURE_BY_ID[d.measureId].cost, 0);
 
@@ -96,6 +130,8 @@ export function Simulator() {
   }
 
   function updateSlots(next: (Decision | null)[]) {
+    const changed = mostChanged(views, viewsFor(next));
+    if (changed) setFocus((f) => ({ id: changed, key: f.key + 1 }));
     setSlots(next);
     resetDerived();
   }
@@ -178,7 +214,7 @@ export function Simulator() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <header className="flex flex-wrap items-end justify-between gap-4">
+      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm font-medium text-teal-deep">QALA · Latitude51N</p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-ink sm:text-4xl">
@@ -188,31 +224,35 @@ export function Simulator() {
             У вас 100 единиц бюджета и ровно пять решений. Выберите меры, посмотрите, какие
             районы выиграли, и проверьте, можно ли сделать лучше.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={loadReference}
+              className="rounded-xl bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
+            >
+              Загрузить пример организаторов
+            </button>
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:border-warn"
+            >
+              Начать заново
+            </button>
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={loadReference}
-            className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:border-teal"
-          >
-            Загрузить пример организаторов
-          </button>
-          <button
-            type="button"
-            onClick={reset}
-            className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:border-warn"
-          >
-            Начать заново
-          </button>
-        </div>
+        <HeroScene views={views} />
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
         <div className="lg:sticky lg:top-6 lg:self-start">
-          <DistrictMap
+          <CityMapPanel
+            views={views}
             districts={result?.valid ? result.districts : null}
             highlightIds={highlightIds}
             selectedDistrict={districtForPicker}
+            focusDistrict={focus.id}
+            focusKey={focus.key}
             onSelect={setDistrict}
           />
         </div>

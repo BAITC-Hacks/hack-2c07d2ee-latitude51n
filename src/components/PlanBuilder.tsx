@@ -13,6 +13,8 @@ import {
   type DistrictId,
   type MeasureId,
 } from "@/lib/engine";
+import { useState } from "react";
+import { AnimatedTabs } from "@/components/ui/animated-tabs";
 import { cn } from "@/lib/utils";
 
 const DIRECTIONS: Direction[] = ["transport", "ecology", "social", "safety", "services"];
@@ -43,6 +45,7 @@ export function PlanBuilder({
   onClearSlot,
 }: Props) {
   const activeDecision = decisions[activeSlot];
+  const [filter, setFilter] = useState<Direction | "all">("all");
 
   return (
     <section className="rounded-2xl border border-line bg-surface p-4 sm:p-5">
@@ -142,24 +145,40 @@ export function PlanBuilder({
         </p>
       )}
 
-      <div className="mb-3 flex flex-wrap gap-2">
-        {DIRECTIONS.map((dir) => (
-          <span
-            key={dir}
-            className={cn(
-              "rounded-full px-2.5 py-1 text-xs",
-              directionCounts[dir] >= MAX_PER_DIRECTION
-                ? "bg-warn-soft text-warn"
-                : "bg-bg text-ink-muted",
-            )}
-          >
-            {DIRECTION_LABELS[dir]} {directionCounts[dir]}/{MAX_PER_DIRECTION}
-          </span>
-        ))}
-      </div>
+      <AnimatedTabs
+        label="Направления"
+        value={filter}
+        onValueChange={setFilter}
+        className="mb-3 flex-wrap gap-1 rounded-xl bg-bg p-1"
+        indicatorClassName="rounded-lg bg-surface shadow-sm ring-1 ring-line"
+        tabClassName="rounded-lg px-2.5 py-1.5 text-xs font-medium text-ink-muted transition-colors data-[checked=true]:text-ink focus-visible:outline-2 focus-visible:outline-ink"
+        tabs={[
+          { id: "all", label: "Все" },
+          ...DIRECTIONS.map((dir) => ({
+            id: dir,
+            label: (
+              <>
+                {DIRECTION_LABELS[dir]}{" "}
+                <span
+                  className={cn(
+                    "tabular-nums",
+                    directionCounts[dir] >= MAX_PER_DIRECTION && "text-warn",
+                  )}
+                >
+                  {directionCounts[dir]}/{MAX_PER_DIRECTION}
+                </span>
+              </>
+            ),
+          })),
+        ]}
+      />
 
-      <div className="grid max-h-[380px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2">
-        {MEASURES.map((m) => {
+      <div
+        role="tabpanel"
+        aria-label={filter === "all" ? "Все мероприятия" : DIRECTION_LABELS[filter]}
+        className="grid max-h-[380px] gap-2 overflow-y-auto pr-1 sm:grid-cols-2"
+      >
+        {MEASURES.filter((m) => filter === "all" || m.direction === filter).map((m) => {
           const inActive = activeDecision?.measureId === m.id;
           const blocker = inActive ? null : blockers[m.id];
           return (

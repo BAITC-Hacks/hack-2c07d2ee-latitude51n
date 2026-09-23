@@ -104,6 +104,12 @@ function applyEffects(
   return synergyHits;
 }
 
+export function baseDistrictScores(): Record<DistrictId, number> {
+  return Object.fromEntries(
+    DISTRICTS.map((d) => [d.id, districtScore(d.indicators)]),
+  ) as Record<DistrictId, number>;
+}
+
 export function computeBaseScore(): number {
   const scores = DISTRICTS.map((d) => districtScore(d.indicators));
   const dAvg = DISTRICTS.reduce(

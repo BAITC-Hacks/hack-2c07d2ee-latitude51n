@@ -40,6 +40,8 @@ interface Props {
   highlightIds: DistrictId[];
   selectedDistrict: DistrictId | null;
   onSelect: (id: DistrictId) => void;
+  /** Render without its own card and heading, for embedding in another panel. */
+  bare?: boolean;
 }
 
 export function DistrictMap({
@@ -47,6 +49,7 @@ export function DistrictMap({
   highlightIds,
   selectedDistrict,
   onSelect,
+  bare = false,
 }: Props) {
   const reduce = useReducedMotion();
 
@@ -59,15 +62,22 @@ export function DistrictMap({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-line bg-surface p-4 shadow-[0_1px_0_rgba(13,39,68,0.04)]">
-      <div className="mb-2 flex items-baseline justify-between gap-3">
-        <h2
-          className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink"
-        >
-          Схема районов
-        </h2>
-        <p className="text-xs text-ink-muted">Условная карта · не геометрия города</p>
-      </div>
+    <div
+      className={cn(
+        "relative overflow-hidden",
+        !bare && "rounded-2xl border border-line bg-surface p-4",
+      )}
+    >
+      {bare ? (
+        <p className="mb-2 text-xs text-ink-muted">Условная схема, не геометрия города</p>
+      ) : (
+        <div className="mb-2 flex items-baseline justify-between gap-3">
+          <h2 className="font-[family-name:var(--font-display)] text-lg font-semibold text-ink">
+            Схема районов
+          </h2>
+          <p className="text-xs text-ink-muted">Условная схема, не геометрия города</p>
+        </div>
+      )}
 
       <svg
         viewBox="60 20 450 320"
