@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+:root {
+  --bg: #e8eef3;
+  --bg-deep: #d5e0ea;
+  --surface: #ffffff;
+  --ink: #0d2744;
+  --ink-muted: #4a6078;
+  --line: #c5d3e0;
+  --teal: #0d9f8c;
+  --teal-deep: #0a7a6b;
+  --teal-soft: #d5f3ee;
+  --warn: #c45c26;
+  --warn-soft: #fde8dc;
+  --good: #1a7a4c;
+  --good-soft: #d8f3e4;
+  --crit: #b42318;
+  --map-idle: #b8c9d9;
+  --map-hot: #0d9f8c;
+  --map-cold: #7a92a8;
+}
+
+@theme inline {
+  --color-bg: var(--bg);
+  --color-bg-deep: var(--bg-deep);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-ink-muted: var(--ink-muted);
+  --color-line: var(--line);
+  --color-teal: var(--teal);
+  --color-teal-deep: var(--teal-deep);
+  --color-teal-soft: var(--teal-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-good: var(--good);
+  --color-good-soft: var(--good-soft);
+  --color-crit: var(--crit);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(ellipse 80% 50% at 10% -10%, #c8dde8 0%, transparent 55%),
+    radial-gradient(ellipse 60% 40% at 90% 0%, #d0ebe4 0%, transparent 50%),
+    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  color: var(--ink);
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+::selection {
+  background: var(--teal-soft);
+  color: var(--ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
