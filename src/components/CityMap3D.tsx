@@ -2,7 +2,7 @@
 
 import "maplibre-gl/dist/maplibre-gl.css";
 import { AttributionControl, LngLatBounds, Map as MapLibreMap, Marker, NavigationControl, setWorkerUrl } from "maplibre-gl";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { DistrictId } from "@/lib/engine";
 import {
   deltaColor,
@@ -53,6 +53,7 @@ export default function CityMap3D({
   const heightsRef = useRef(new Map<DistrictId, number>());
   const frameRef = useRef<number | null>(null);
   const readyRef = useRef(false);
+  const [ready, setReady] = useState(false);
   const latest = useRef({ views, selectedDistrict, onSelect, onFail });
   latest.current = { views, selectedDistrict, onSelect, onFail };
 
@@ -162,6 +163,7 @@ export default function CityMap3D({
       window.clearTimeout(timeout);
       applyViews(latest.current.views, true);
       applySelection(latest.current.selectedDistrict);
+      setReady(true);
     });
 
     map.on("error", (e) => {
@@ -177,6 +179,7 @@ export default function CityMap3D({
       markers.forEach(({ marker }) => marker.remove());
       markers.clear();
       readyRef.current = false;
+      setReady(false);
       map.remove();
       mapRef.current = null;
     };
@@ -261,7 +264,7 @@ export default function CityMap3D({
     };
     if (prefersReducedMotion()) map.jumpTo(camera);
     else map.flyTo({ ...camera, duration: 1800, essential: false });
-  }, [focusDistrict, focusKey]);
+  }, [focusDistrict, focusKey, ready]);
 
   return <div ref={containerRef} className="h-full w-full" />;
 }

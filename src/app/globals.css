@@ -50,12 +50,25 @@ body {
 
 body {
   margin: 0;
-  background:
-    radial-gradient(ellipse 80% 50% at 10% -10%, #c8dde8 0%, transparent 55%),
-    radial-gradient(ellipse 60% 40% at 90% 0%, #d0ebe4 0%, transparent 50%),
-    linear-gradient(180deg, var(--bg) 0%, var(--bg-deep) 100%);
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(ellipse 80% 60% at 10% -10%, #c8dde8 0%, transparent 60%),
+    radial-gradient(ellipse 60% 50% at 90% 0%, #d0ebe4 0%, transparent 55%);
+  background-repeat: no-repeat;
+  background-size: 100% 100vh;
   color: var(--ink);
   font-family: var(--font-body), system-ui, sans-serif;
+}
+
+:focus-visible {
+  outline: 2px solid var(--teal);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
 }
 
 ::selection {

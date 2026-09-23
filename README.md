@@ -16,7 +16,7 @@ cp .env.local.example .env.local   # впишите OPENAI_API_KEY
 npm run dev
 ```
 
-Откройте [http://localhost:3000](http://localhost:3000).
+Откройте [http://localhost:3000](http://localhost:3000). На главной лендинг, сам симулятор на [`/simulator`](http://localhost:3000/simulator). Ссылка `/simulator?plan=reference` открывает его сразу с планом организаторов.
 
 Без ключа работает всё, кроме AI-разбора: кнопка «Объяснить сценарий» покажет, что ключа нет.
 
@@ -38,6 +38,7 @@ npm run dev
 
 ## Демо-сценарий
 
+0. Лендинг: прокрутите страницу. 3D-макет Астаны меняется вместе с текстом: город без решений (52,55768), план организаторов (56,54307), лучшая замена одной меры. Все три числа на лендинге считает тот же движок на сервере. Кнопка «Начать симуляцию» ведёт в симулятор.
 1. «Загрузить пример организаторов» — Score 56,54307. Колонны районов на 3D-карте вырастают, камера перелетает к району, который изменился сильнее всех (Нура), видна синергия M10+M12.
 2. «Найти лучшую замену» — программа показывает, какую меру заменить, прирост Score, какой район выиграл и какой потерял. «Применить замену» переносит её в план.
 3. «Объяснить сценарий» — AI-разбор готового расчёта.
@@ -53,8 +54,12 @@ npm run dev
 
 ```
 src/lib/engine/        данные, валидатор, расчёт Score, перебор замен, тесты
-src/components/        3D-карта, 3D-макет в шапке, SVG-схема, конструктор плана, результаты
-src/components/ui/     Number Ticker и Animated Tabs (адаптированы из 21st.dev)
+src/app/page.tsx       лендинг (статическая страница, числа из движка)
+src/app/simulator/     симулятор
+src/components/        3D-карта, 3D-макет города, SVG-схема, конструктор плана, результаты
+src/components/landing/  секции лендинга и история с закреплённой 3D-сценой
+src/components/ui/     Number Ticker, Animated Tabs, Magnetic, TextEffect
+src/lib/landing.ts     три состояния города для лендинга
 src/app/api/analyze/   серверный AI-разбор
 public/geo/            границы пяти районов Астаны (GeoJSON, ~9 КБ)
 scripts/               копирование воркера MapLibre в public/maplibre
@@ -62,12 +67,12 @@ scripts/               копирование воркера MapLibre в public/
 
 Один валидатор используется везде: для Score, для подсказок, почему мера недоступна, для перебора замен и на сервере. `/api/analyze` принимает только список решений, сам пересчитывает Score и лучшую замену и передаёт модели готовые числа. Результату, пришедшему из браузера, сервер не доверяет. Ключ OpenAI живёт только на сервере.
 
-Стек: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, Motion (с учётом `prefers-reduced-motion`), MapLibre GL, three.js + React Three Fiber + drei, Vitest, OpenAI Chat Completions API.
+Стек: Next.js 16 (App Router), TypeScript, Tailwind CSS 4, Motion (с учётом `prefers-reduced-motion`), MapLibre GL, three.js + React Three Fiber + drei, Phosphor Icons, шрифты Unbounded и IBM Plex Sans, Vitest, OpenAI Chat Completions API.
 
 ## Карта
 
 - **3D-карта** (MapLibre GL, `fill-extrusion`): настоящие границы районов, высота колонны — оценка района после плана, цвет — изменение. Клик по району выбирает его для районных мер.
-- **3D-макет в шапке** (three.js): те же границы, выдавленные по оценке. Грузится лениво, только на экранах от 640 px с WebGL.
+- **3D-макет на лендинге** (three.js): те же границы, выдавленные по оценке. Сцена закреплена при прокрутке, камера облетает город вслед за скроллом, районы меняют высоту и цвет по главам. Грузится лениво, отрисовка останавливается, когда сцена вне экрана. Без WebGL показываются столбики, при `prefers-reduced-motion` камера и высоты не анимируются.
 - **SVG-схема** — запасной вариант. Включается сама, если нет WebGL, подложка не загрузилась за 10 секунд или нет интернета; её можно выбрать и вручную.
 
 Подложке нужен интернет (тайлы OpenFreeMap). Воркер MapLibre копируется в `public/maplibre` скриптом `scripts/copy-maplibre-worker.mjs` при `npm install`, `npm run dev` и `npm run build`.
@@ -79,6 +84,8 @@ scripts/               копирование воркера MapLibre в public/
 - Границы районов: © участники [OpenStreetMap](https://www.openstreetmap.org/copyright), лицензия ODbL (relations 3479876, 3482819, 3486954, 8593081, 20593940).
 - Подложка: [OpenFreeMap](https://openfreemap.org), © [OpenMapTiles](https://www.openmaptiles.org), данные © OpenStreetMap.
 - Number Ticker (автор danielpetho) и Animated Tabs (автор ibelick) с [21st.dev](https://21st.dev) — адаптированы: анимация от предыдущего значения, русский формат чисел, роли и клавиатура ARIA.
+- Magnetic и TextEffect из [Motion Primitives](https://github.com/ibelick/motion-primitives) (ibelick, MIT; те же компоненты публикуются на 21st.dev). Адаптированы: учёт `prefers-reduced-motion`, магнит только для мыши, текст заголовка доступен скринридерам.
+- Направление дизайна лендинга сверялось с [taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT) и `frontend-design`; идея сцены, которая меняется при прокрутке, навеяна [PeachWeb](https://peachweb.io).
 - Скиллы для Cursor в `.cursor/skills`: `frontend-design` (Anthropic, Apache 2.0) и `ui-ux-pro-max` (MIT); лицензии лежат рядом.
 
 ## Переменные окружения

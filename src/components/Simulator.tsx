@@ -1,8 +1,9 @@
 "use client";
 
+import { ArrowLeftIcon } from "@phosphor-icons/react";
+import Link from "next/link";
 import { useMemo, useState, useTransition } from "react";
 import { CityMapPanel } from "@/components/CityMapPanel";
-import { HeroScene } from "@/components/HeroScene";
 import { PlanBuilder } from "@/components/PlanBuilder";
 import { ResultsPanel } from "@/components/ResultsPanel";
 import {
@@ -57,8 +58,8 @@ function mostChanged(
   return best;
 }
 
-export function Simulator() {
-  const [slots, setSlots] = useState<(Decision | null)[]>(EMPTY);
+export function Simulator({ initialPlan = null }: { initialPlan?: Decision[] | null }) {
+  const [slots, setSlots] = useState<(Decision | null)[]>(initialPlan ?? EMPTY);
   const [activeSlot, setActiveSlot] = useState(0);
   const [districtForPicker, setDistrictForPicker] = useState<DistrictId>("nura");
   const [analysis, setAnalysis] = useState<string | null>(null);
@@ -67,7 +68,10 @@ export function Simulator() {
   const [improveNote, setImproveNote] = useState<string | null>(null);
   const [analysisLoading, startAnalysis] = useTransition();
   const [improveLoading, startImprove] = useTransition();
-  const [focus, setFocus] = useState<{ id: DistrictId | null; key: number }>({ id: null, key: 0 });
+  const [focus, setFocus] = useState<{ id: DistrictId | null; key: number }>(() => ({
+    id: initialPlan ? mostChanged(viewsFor(EMPTY), viewsFor(initialPlan)) : null,
+    key: initialPlan ? 1 : 0,
+  }));
 
   const filled = useMemo(() => slots.filter((d): d is Decision => d !== null), [slots]);
   const views = useMemo(() => viewsFor(slots), [slots]);
@@ -214,34 +218,39 @@ export function Simulator() {
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <header className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm font-medium text-teal-deep">QALA · Latitude51N</p>
-          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-ink sm:text-4xl">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-1.5 rounded-md text-sm font-medium text-ink-muted hover:text-ink"
+          >
+            <ArrowLeftIcon size={16} weight="bold" aria-hidden />
+            <span className="font-[family-name:var(--font-display)] font-bold text-ink">QALA</span>
+          </Link>
+          <h1 className="mt-3 font-[family-name:var(--font-display)] text-3xl font-bold tracking-tight text-ink sm:text-4xl">
             Аким на 5 часов
           </h1>
           <p className="mt-2 max-w-xl text-sm text-ink-muted sm:text-base">
             У вас 100 единиц бюджета и ровно пять решений. Выберите меры, посмотрите, какие
             районы выиграли, и проверьте, можно ли сделать лучше.
           </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={loadReference}
-              className="rounded-xl bg-ink px-3 py-2 text-sm font-medium text-white hover:bg-ink/90"
-            >
-              Загрузить пример организаторов
-            </button>
-            <button
-              type="button"
-              onClick={reset}
-              className="rounded-xl border border-line bg-surface px-3 py-2 text-sm font-medium hover:border-warn"
-            >
-              Начать заново
-            </button>
-          </div>
         </div>
-        <HeroScene views={views} />
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={loadReference}
+            className="rounded-xl bg-ink px-3.5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-teal-deep active:scale-[0.98]"
+          >
+            Загрузить пример организаторов
+          </button>
+          <button
+            type="button"
+            onClick={reset}
+            className="rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm font-medium transition-colors hover:border-warn active:scale-[0.98]"
+          >
+            Начать заново
+          </button>
+        </div>
       </header>
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
